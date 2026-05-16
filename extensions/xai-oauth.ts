@@ -189,6 +189,58 @@ export default function (pi: ExtensionAPI) {
           };
         },
       },
+      {
+        name: "xai_multi_agent",
+        description: "Run deep multi-agent research using Grok (4 or 16 agents).",
+        parameters: {
+          type: "object",
+          properties: {
+            query: {
+              type: "string",
+              description: "Research question or topic",
+            },
+            num_agents: {
+              type: "number",
+              enum: [4, 16],
+              description: "Number of research agents",
+              default: 4,
+            },
+            reasoning_effort: {
+              type: "string",
+              enum: ["medium", "high"],
+              default: "high",
+            },
+          },
+          required: ["query"],
+        },
+        handler: async (args: any, context: any) => {
+          const apiKey = context?.apiKey || process.env.XAI_API_KEY;
+          if (!apiKey) return { error: "No xAI API key available" };
+
+          const prompt = `You are leading a team of ${args.num_agents} expert researchers. Conduct deep research on: ${args.query}. Synthesize findings from multiple perspectives.`;
+
+          const response = await fetch("https://api.x.ai/v1/responses", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            },
+            body: JSON.stringify({
+              model: "grok-4.3",
+              input: prompt,
+              reasoning: { effort: args.reasoning_effort || "high" },
+            }),
+          });
+
+          const data = await response.json();
+
+          return {
+            research: data.output?.[0]?.content?.[0]?.text || "Research completed",
+            agents_used: args.num_agents,
+            response_id: data.id,
+          };
+        },
+      },
     ],
 
     models: [
