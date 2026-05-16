@@ -1,6 +1,6 @@
 {
   "name": "pi-xai-oauth",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "xAI (Grok) provider with OAuth support for pi",
   "keywords": ["pi-package"],
   "license": "MIT",
