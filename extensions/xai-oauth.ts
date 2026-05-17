@@ -752,10 +752,10 @@ export default function (pi: ExtensionAPI) {
         required: ["prompt"],
       },
       execute: async (_toolCallId: string, params: any, _signal: any, _onUpdate: any, ctx: any) => {
-        const apiKey = ctx?.apiKey || process.env.XAI_API_KEY;
+        const apiKey = getXaiAuthToken(ctx);
         if (!apiKey) {
           return {
-            content: [{ type: "text", text: "Error: No xAI API key available" }],
+            content: [{ type: "text", text: "Error: No xAI OAuth credentials found. Please run the OAuth login first." }],
             details: { reasoning: "", response_id: "" },
           };
         }
@@ -835,10 +835,10 @@ export default function (pi: ExtensionAPI) {
         required: ["query"],
       },
       execute: async (_toolCallId: string, params: any, _signal: any, _onUpdate: any, ctx: any) => {
-        const apiKey = ctx?.apiKey || process.env.XAI_API_KEY;
+        const apiKey = getXaiAuthToken(ctx);
         if (!apiKey) {
           return {
-            content: [{ type: "text", text: "Error: No xAI API key available" }],
+            content: [{ type: "text", text: "Error: No xAI OAuth credentials found. Please run the OAuth login first." }],
             details: { agents_used: 0, response_id: "" },
           };
         }
@@ -891,9 +891,9 @@ export default function (pi: ExtensionAPI) {
         required: ["query"],
       },
       execute: async (_toolCallId: string, params: { query?: string }, _signal: any, _onUpdate: any, ctx: any) => {
-        const apiKey = ctx?.apiKey || process.env.XAI_API_KEY;
+        const apiKey = getXaiAuthToken(ctx);
         if (!apiKey) {
-          return { content: [{ type: "text", text: `Error: No xAI API key for web search` }], details: { query: params?.query } };
+          return { content: [{ type: "text", text: `Error: No xAI OAuth credentials found. Please run the OAuth login first.` }], details: { query: params?.query } };
         }
         const prompt = `You have access to current web knowledge and search capabilities. Perform a web search for: ${params.query}. Summarize the top results with sources, key facts, dates, and any recent developments. Prioritize authoritative sources.`;
         const res = await fetch("https://api.x.ai/v1/responses", {
@@ -970,9 +970,9 @@ Be specific and cite examples where helpful.`;
         required: ["code"],
       },
       execute: async (_toolCallId: string, params: { code?: string }, _signal: any, _onUpdate: any, ctx: any) => {
-        const apiKey = ctx?.apiKey || process.env.XAI_API_KEY;
+        const apiKey = getXaiAuthToken(ctx);
         if (!apiKey) {
-          return { content: [{ type: "text", text: `Error: No xAI API key for code execution` }], details: { code: params?.code } };
+          return { content: [{ type: "text", text: `Error: No xAI OAuth credentials found. Please run the OAuth login first.` }], details: { code: params?.code } };
         }
         const prompt = `Execute or analyze this Python code and show the result or output:\n\n${params.code}`;
         const res = await fetch("https://api.x.ai/v1/responses", {
