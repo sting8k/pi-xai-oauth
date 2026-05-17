@@ -28,5 +28,8 @@
   },
   "devDependencies": {
     "@types/node": "^25.8.0"
+  },
+  "dependencies": {
+    "pi-xai-oauth": "^1.0.25"
   }
 }
