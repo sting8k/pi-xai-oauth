@@ -11,3 +11,4 @@ build/
 *.key
 auth.json
 *.local
+.pi/

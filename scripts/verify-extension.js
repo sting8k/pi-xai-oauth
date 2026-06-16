@@ -117,63 +117,6 @@ async function runTool(tools, name, params = {}, expectedText = "OK", requestPre
   return { body: request.body, request, result };
 }
 
-async function runCursorTool(tools, name, params = {}, ctx = {}) {
-  const controller = new AbortController();
-  return tools.get(name).execute("call_cursor", params, controller.signal, () => {}, { cwd: repoRoot, ...ctx });
-}
-
-async function verifyCursorToolShims(tools) {
-  for (const name of ["Read", "Write", "StrReplace", "Edit", "Delete", "LS", "Grep", "Glob", "Shell", "WebSearch"]) {
-    assert.ok(tools.has(name), `${name} Cursor/Grok CLI shim should be registered`);
-  }
-
-  const grepResult = await runCursorTool(tools, "Grep", { query: "export const DEFAULT_XAI_MODEL", include: "*.ts", path: "extensions", limit: 5 });
-  assert.match(grepResult.content[0].text, /xai\/constants\.ts/, "Grep shim should map query/include to pi grep pattern/glob");
-
-  const globResult = await runCursorTool(tools, "Glob", { glob: "xai-oauth.ts" });
-  assert.match(globResult.content[0].text, /extensions\/xai-oauth\.ts/, "Glob shim should map to pi find");
-
-  const readResult = await runCursorTool(tools, "Read", { file_path: "package.json", limit: 3 });
-  assert.match(readResult.content[0].text, /"name": "pi-xai-oauth"/, "Read shim should map file_path to pi read path");
-
-  const tmpDir = path.join(repoRoot, ".tmp-shim-tests");
-  const tmpFile = path.join(tmpDir, "cursor-shim.txt");
-  await fs.mkdir(tmpDir, { recursive: true });
-  try {
-    const writeResult = await runCursorTool(tools, "Write", { file_path: ".tmp-shim-tests/cursor-shim.txt", contents: "hello old" });
-    assert.match(writeResult.content[0].text, /Successfully wrote/, "Write shim should map contents to pi write content");
-
-    const replaceResult = await runCursorTool(tools, "StrReplace", {
-      file_path: ".tmp-shim-tests/cursor-shim.txt",
-      old_string: "hello old",
-      new_string: "hello new",
-    });
-    assert.match(replaceResult.content[0].text, /Successfully replaced/, "StrReplace shim should map old_string/new_string to pi edit");
-
-    const shellResult = await runCursorTool(tools, "Shell", { cmd: "printf shim-ok" });
-    assert.match(shellResult.content[0].text, /shim-ok/, "Shell shim should map cmd to pi bash command");
-
-    const deleteResult = await runCursorTool(tools, "Delete", { file_path: ".tmp-shim-tests/cursor-shim.txt" });
-    assert.match(deleteResult.content[0].text, /Deleted/, "Delete shim should remove files inside the workspace");
-  } finally {
-    await fs.rm(tmpFile, { force: true }).catch(() => {});
-    await fs.rm(tmpDir, { force: true, recursive: true }).catch(() => {});
-  }
-}
-
-async function verifyCursorToolActivation(loadResult) {
-  const { handlers, getActiveTools } = loadResult;
-  const ctx = {
-    getActiveTools,
-    setActiveTools: loadResult.setActiveTools,
-  };
-
-  await handlers.get("model_select")?.({ model: { provider: "xai-auth", id: "grok-composer-2.5-fast" } }, ctx);
-  assert.ok(getActiveTools().includes("Grep"), "Cursor shims should be enabled for Composer 2.5");
-
-  await handlers.get("model_select")?.({ model: { provider: "xai-auth", id: "grok-4.3" } }, ctx);
-  assert.ok(!getActiveTools().includes("Grep"), "Cursor shims should be disabled for non-Grok-CLI xAI models");
-}
 
 async function verifyCliModelStreamRouting(provider) {
   const composer = provider.models.find((model) => model.id === "grok-composer-2.5-fast");
@@ -333,9 +276,14 @@ async function main() {
     assert.equal(provider.models.find((model) => model.id === "grok-4.20-0309-reasoning")?.contextWindow, 2_000_000);
     assert.ok(provider.models.some((model) => model.id === "grok-4.20-multi-agent-0309"));
 
+    for (const name of [
+      "xai_web_search", "xai_x_search", "xai_code_execution", "xai_critique", "xai_deep_research",
+      "Read", "Write", "StrReplace", "Edit", "Delete", "LS", "Grep", "Glob", "Shell", "WebSearch",
+    ]) {
+      assert.ok(!tools.has(name), `${name} should not be registered (removed in slim-toolset)`);
+    }
+
     await verifyCliModelStreamRouting(provider);
-    await verifyCursorToolActivation(firstLoad);
-    await verifyCursorToolShims(tools);
 
     await verifyOAuthCallbackState(provider);
     await verifyOAuthManualRawCode(provider);
@@ -372,17 +320,6 @@ async function main() {
     assert.equal(buildBody.model, "grok-build");
     assert.equal(headerValue(buildRequest.headers, "x-grok-model-override"), "grok-build");
     assert.ok(headerValue(buildRequest.headers, "x-grok-conv-id"), "Grok Build tool calls should include a Grok conversation id");
-
-    const { body: webBody } = await runTool(tools, "xai_web_search", { query: "xAI docs" });
-    assert.deepEqual(webBody.tools, [{ type: "web_search", enable_image_understanding: true }]);
-
-    const { body: xBody } = await runTool(tools, "xai_x_search", { query: "grok", since: "2026-05-01", until: "2026-05-22" });
-    assert.equal(xBody.tools[0].type, "x_search");
-    assert.equal(xBody.tools[0].from_date, "2026-05-01");
-    assert.equal(xBody.tools[0].to_date, "2026-05-22");
-
-    const { body: codeBody } = await runTool(tools, "xai_code_execution", { code: "print(2 + 2)" });
-    assert.deepEqual(codeBody.tools, [{ type: "code_interpreter" }]);
 
     const { body: imageAnalysisBody } = await runTool(tools, "xai_analyze_image", {
       image: "https://example.test/cat.png",

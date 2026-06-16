@@ -14,7 +14,7 @@
 npx pi-xai-oauth
 ```
 
-This package adds **Grok 4.3**, **Grok Build**, and **Composer 2.5** as fully-integrated xAI OAuth models in pi, with proper OAuth login, automatic token refresh, and a suite of custom tools (`xai_generate_text`, `xai_web_search`, `xai_x_search`, etc.).
+This package adds **Grok 4.3**, **Grok Build**, and **Composer 2.5** as fully-integrated xAI OAuth models in pi, with proper OAuth login, automatic token refresh, and a suite of custom tools (`xai_generate_text`, `xai_multi_agent`, `xai_generate_image`, `xai_analyze_image`).
 
 ---
 
@@ -47,7 +47,7 @@ This package adds **Grok 4.3**, **Grok Build**, and **Composer 2.5** as fully-in
 - **1M context window** — Grok 4.3's full context, no truncation
 - **Coding models** — Grok Build and Composer 2.5 Fast are available from the same `xai-auth` provider
 - **Reasoning support** — configurable thinking levels: `low` / `medium` / `high`
-- **Custom xAI tools** — generate text, web search, X/Twitter search, multi-agent research, code analysis
+- **Custom xAI tools** — `xai_generate_text` (with reasoning and vision), `xai_multi_agent` (multi-agent research), image generation, and image analysis
 - **Modern API** — uses OpenAI's `responses` API format via `https://api.x.ai/v1`, with Grok CLI endpoint routing for CLI-only models
 
 > **✅ Verified (May 2026)**: All custom xAI tools (`xai_generate_text`, `xai_x_search`, `xai_web_search`, `xai_code_execution`, `xai_critique`, `xai_multi_agent`, `xai_deep_research`, image tools, etc.) have been tested end-to-end after the OAuth + payload repair. The provider now correctly handles mixed-model requests and native xAI tool shapes.
@@ -71,22 +71,10 @@ If localhost callbacks are blocked (VPN, Docker, remote dev), the TUI shows a te
 
 ## Installation
 
-### One-command install (recommended)
+Install directly from the `feature/slim-toolset-no-shim` branch of the GitHub repo:
 
 ```bash
-npx pi-xai-oauth
-```
-
-This runs the setup script which:
-1. Installs `npm:pi-xai-oauth` into pi
-2. Sets `xai-auth` as your default provider
-3. Sets `grok-4.3` as your default model
-4. Enables `high` thinking level by default
-
-### Manual install
-
-```bash
-pi install npm:pi-xai-oauth
+pi install git:https://github.com/sting8k/pi-xai-oauth.git#feature/slim-toolset-no-shim
 ```
 
 Then optionally configure it as default:
@@ -102,24 +90,18 @@ Then optionally configure it as default:
 
 > **⚠️ Important: install only one copy**
 >
-> `pi-xai-oauth` registers fixed tool names such as `xai_generate_text`, `xai_web_search`, and `xai_x_search`. If you install more than one copy — for example `npm:pi-xai-oauth` plus a local checkout, or two different local checkouts — pi will fail to start with `Tool "xai_generate_text" conflicts with ...` errors.
+> `pi-xai-oauth` registers fixed tool names such as `xai_generate_text`, `xai_multi_agent`, and `xai_generate_image`. If you install more than one copy — for example the published `npm:pi-xai-oauth` plus the git branch above, or two different local checkouts — pi will fail to start with `Tool "xai_generate_text" conflicts with ...` errors.
 >
 > Check with:
 > ```bash
 > pi list
 > ```
 >
-> For local development, keep only this checkout:
+> For the git-branch install, remove other copies first:
 > ```bash
 > pi remove npm:pi-xai-oauth
 > pi remove /path/to/other/pi-xai-oauth-copy
-> pi install .
-> ```
->
-> For the published npm package, remove local checkouts:
-> ```bash
-> pi remove /path/to/local/pi-xai-oauth-copy
-> pi install npm:pi-xai-oauth
+> pi install git:https://github.com/sting8k/pi-xai-oauth.git#feature/slim-toolset-no-shim
 > ```
 >
 > Use the exact package spec/path shown by `pi list` when removing duplicates.
@@ -221,31 +203,13 @@ pi --model grok-4.3:low "What's the weather?"
 
 `grok-build` and `grok-composer-2.5-fast` are routed through xAI's Grok CLI OAuth endpoint using the same X account OAuth token. `grok-composer-2.5-fast` does not accept configurable reasoning effort. `grok-4.20-0309-reasoning` reasons automatically and does not accept a configurable effort parameter. `grok-4.20-multi-agent-0309` uses `medium` for 4 agents and `high` for 16 agents.
 
-### Composer / Grok Build Tool Compatibility
-
-Composer 2.5 and Grok Build are trained against Cursor/Grok CLI-style tool names. When either `grok-composer-2.5-fast` or `grok-build` is selected, this package automatically enables compatibility shims that map those tool calls onto pi's built-in tools:
-
-| Cursor/Grok CLI tool | pi tool used underneath |
-|----------------------|-------------------------|
-| `Read` | `read` |
-| `Write` | `write` |
-| `StrReplace` / `Edit` | `edit` |
-| `Delete` | workspace-safe file delete |
-| `LS` | `ls` |
-| `Grep` | `grep` |
-| `Glob` | `find` |
-| `Shell` | `bash` |
-| `WebSearch` | xAI native web search |
-
-The shims also normalize common Cursor argument names, such as `file_path`, `contents`, `old_string` / `new_string`, `query`, `include`, `glob_filter`, and `cmd`. They are disabled again when you switch back to non-Grok-CLI models such as `grok-4.3`.
-
 ---
 
 ## Custom Tools
 
 This package registers OAuth-backed custom tools that use the xAI API directly. They appear alongside your other agent tools in the pi TUI and are available to any agent running with the `xai-auth` provider.
 
-**How to use them:** Simply call the tool by name in your prompts or agent workflows (e.g. "use xai_web_search to find the latest Rust news"). The tools automatically use your authenticated xAI session.
+**How to use them:** Simply call the tool by name in your prompts or agent workflows (e.g. "use xai_generate_text with reasoning effort high"). The tools automatically use your authenticated xAI session.
 
 > **Tip:** See the ⚠️ warning above about local vs published package conflicts.
 
@@ -271,33 +235,6 @@ Deep multi-agent research using Grok's multi-agent model plus native web and X s
 }
 ```
 
-### `xai_web_search`
-Search the web using xAI's native `web_search` tool.
-
-```json
-{
-  "query": "Rust vs Go performance 2026"
-}
-```
-
-### `xai_x_search`
-Search X (Twitter) using xAI's native `x_search` tool.
-
-```json
-{
-  "query": "grok 4.3"
-}
-```
-
-### `xai_code_execution`
-Run Python-oriented analysis using xAI's native `code_interpreter` tool.
-
-```json
-{
-  "code": "print(sum(range(100)))"
-}
-```
-
 ### `xai_generate_image`
 Generate images with xAI's current image generation model.
 
@@ -315,26 +252,6 @@ Analyze an image URL, data URL, or local `.png` / `.jpg` path with Grok vision.
 {
   "image": "/Users/me/Desktop/screenshot.png",
   "question": "What error is visible?"
-}
-```
-
-### `xai_critique`
-Get structured critique for code, designs, writing, or ideas.
-
-```json
-{
-  "content": "function add(a,b){ return a-b }",
-  "aspect": "code correctness"
-}
-```
-
-### `xai_deep_research`
-Research a topic with Grok reasoning plus native web and X search tools.
-
-```json
-{
-  "topic": "Recent xAI Responses API tool changes",
-  "depth": "high"
 }
 ```
 
