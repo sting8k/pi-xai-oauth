@@ -74,7 +74,7 @@ If localhost callbacks are blocked (VPN, Docker, remote dev), the TUI shows a te
 Install directly from the `feature/slim-toolset-no-shim` branch of the GitHub repo:
 
 ```bash
-pi install git:https://github.com/sting8k/pi-xai-oauth.git#feature/slim-toolset-no-shim
+pi install git:https://github.com/sting8k/pi-xai-oauth.git@feature/slim-toolset-no-shim
 ```
 
 Then optionally configure it as default:
@@ -101,7 +101,7 @@ Then optionally configure it as default:
 > ```bash
 > pi remove npm:pi-xai-oauth
 > pi remove /path/to/other/pi-xai-oauth-copy
-> pi install git:https://github.com/sting8k/pi-xai-oauth.git#feature/slim-toolset-no-shim
+> pi install git:https://github.com/sting8k/pi-xai-oauth.git@feature/slim-toolset-no-shim
 > ```
 >
 > Use the exact package spec/path shown by `pi list` when removing duplicates.
