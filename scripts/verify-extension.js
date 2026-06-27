@@ -63,6 +63,14 @@ function headerValue(headers, name) {
   return headers[name] || headers[name.toLowerCase()];
 }
 
+function urlOriginIs(url, expectedOrigin) {
+  try {
+    return new URL(url).origin === expectedOrigin;
+  } catch {
+    return false;
+  }
+}
+
 function loadExtension() {
   const providers = new Map();
   const tools = new Map();
@@ -101,11 +109,11 @@ function authContext() {
   };
 }
 
-async function runTool(tools, name, params = {}, expectedText = "OK", requestPrefix = "https://api.x.ai") {
+async function runTool(tools, name, params = {}, expectedText = "OK", requestOrigin = "https://api.x.ai") {
   const controller = new AbortController();
   const before = requests.length;
   const result = await tools.get(name).execute("call_test", params, controller.signal, () => {}, authContext());
-  const request = requests.slice(before).find((entry) => entry.url?.startsWith(requestPrefix));
+  const request = requests.slice(before).find((entry) => entry.url && urlOriginIs(entry.url, requestOrigin));
   if (expectedText instanceof RegExp) {
     assert.match(result.content[0].text, expectedText, `${name} should surface mocked xAI text`);
   } else {
@@ -175,6 +183,76 @@ async function verifyCursorToolActivation(loadResult) {
   assert.ok(!getActiveTools().includes("Grep"), "Cursor shims should be disabled for non-Grok-CLI xAI models");
 }
 
+function lastResultErrorMessage(result) {
+  return result && typeof result.errorMessage === "string" ? result.errorMessage : "";
+}
+
+async function captureStreamResultMessage(createStream) {
+  try {
+    const result = await createStream().result();
+    return lastResultErrorMessage(result);
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+}
+
+async function verifyRealGuardSemantics() {
+  const { streamSimpleOpenAIResponses } = await import("@earendil-works/pi-ai");
+  const context = { messages: [{ role: "user", content: "hello", timestamp: Date.now() }] };
+  const baseModel = {
+    id: "grok-4.3",
+    provider: "xai-auth",
+    baseUrl: "https://api.x.ai/v1",
+    headers: {},
+    reasoning: true,
+    input: ["text", "image"],
+  };
+
+  const rejectedMessage = await captureStreamResultMessage(() =>
+    streamSimpleOpenAIResponses({ ...baseModel, api: "xai-responses" }, context, { apiKey: "oauth-token" }),
+  );
+  assert.match(
+    rejectedMessage,
+    /Mismatched api/,
+    "installed @earendil-works/pi-ai must API-guard openai-responses (bump dev dep to 0.79.8)",
+  );
+
+  const before = requests.length;
+  const acceptedMessage = await captureStreamResultMessage(() =>
+    streamSimpleOpenAIResponses({ ...baseModel, api: "openai-responses" }, context, { apiKey: "oauth-token" }),
+  );
+  assert.doesNotMatch(acceptedMessage, /Mismatched api/, "an openai-responses model must satisfy the real guard");
+  assert.ok(
+    requests.slice(before).some((entry) => entry.url && urlOriginIs(entry.url, "https://api.x.ai")),
+    "guarded call should reach the xAI endpoint",
+  );
+}
+
+async function verifyXaiStreamPassesRealGuard(provider) {
+  const before = requests.length;
+  const message = await captureStreamResultMessage(() =>
+    provider.streamSimple(
+      {
+        id: "grok-4.3",
+        provider: "xai-auth",
+        api: "xai-responses",
+        baseUrl: "https://api.x.ai/v1",
+        headers: {},
+        reasoning: true,
+        input: ["text", "image"],
+      },
+      { messages: [{ role: "user", content: "hello", timestamp: Date.now() }] },
+      { apiKey: "oauth-token", sessionId: "guard-session" },
+    ),
+  );
+  assert.doesNotMatch(message, /Mismatched api/, "xAI provider stream must satisfy pi 0.79.8 API guard");
+  assert.ok(
+    requests.slice(before).some((entry) => entry.url && urlOriginIs(entry.url, "https://api.x.ai")),
+    "xAI stream should reach the xAI endpoint past the guard",
+  );
+}
+
+
 async function verifyCliModelStreamRouting(provider) {
   const composer = provider.models.find((model) => model.id === "grok-composer-2.5-fast");
   const model = {
@@ -190,7 +268,7 @@ async function verifyCliModelStreamRouting(provider) {
     { apiKey: "oauth-token", sessionId: "session-test" },
   );
   await stream.result();
-  const request = requests.slice(before).find((entry) => entry.url?.startsWith("https://cli-chat-proxy.grok.com"));
+  const request = requests.slice(before).find((entry) => entry.url && urlOriginIs(entry.url, "https://cli-chat-proxy.grok.com"));
   assert.ok(request, "Composer 2.5 provider streams should route to the Grok CLI endpoint");
   assert.equal(request.body.model, "grok-composer-2.5-fast");
   assert.equal(request.body.reasoning, undefined, "Composer 2.5 provider streams should not send reasoning effort");
@@ -332,6 +410,9 @@ async function main() {
     assert.equal(provider.models.find((model) => model.id === "grok-composer-2.5-fast")?.reasoning, false);
     assert.equal(provider.models.find((model) => model.id === "grok-4.20-0309-reasoning")?.contextWindow, 2_000_000);
     assert.ok(provider.models.some((model) => model.id === "grok-4.20-multi-agent-0309"));
+
+    await verifyRealGuardSemantics();
+    await verifyXaiStreamPassesRealGuard(provider);
 
     await verifyCliModelStreamRouting(provider);
     await verifyCursorToolActivation(firstLoad);

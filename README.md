@@ -16,6 +16,8 @@ npx pi-xai-oauth
 
 This package adds **Grok 4.3**, **Grok Build**, and **Composer 2.5** as fully-integrated xAI OAuth models in pi, with proper OAuth login, automatic token refresh, and a suite of custom tools (`xai_generate_text`, `xai_web_search`, `xai_x_search`, etc.).
 
+> **Latest compatibility note:** `pi-xai-oauth` 1.2.4+ supports pi 0.79.8+'s OpenAI Responses API guard for Grok/xAI streaming. Existing npm installs should run `pi update npm:pi-xai-oauth`; local checkout installs should keep only one copy installed with `pi remove npm:pi-xai-oauth && pi install .`.
+
 ---
 
 ## Table of Contents
@@ -460,6 +462,12 @@ pi update npm:pi-xai-oauth
 ```
 
 This pulls the latest version from npm and updates your installed extension.
+
+pi 0.79.8+ enforces an OpenAI Responses API guard. `pi-xai-oauth` 1.2.4 handles that guard for Grok/xAI streaming. If you installed the published npm package, update with the command above. If you are testing a local checkout instead, reinstall the checkout:
+
+```bash
+pi remove npm:pi-xai-oauth && pi install .
+```
 
 If you previously installed a local checkout with `pi install .`, `pi update npm:pi-xai-oauth` will not replace that local copy. Run `pi list` and make sure only one `pi-xai-oauth` entry is installed. Remove duplicate npm/local/worktree copies before restarting pi.
 

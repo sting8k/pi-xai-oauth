@@ -1,0 +1,12 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # Dependabot security run 27856660362 / job 82445322754 failed with
+      # `security_update_not_needed` for protobufjs; keep this ignored until
+      # Dependabot no longer raises this false-positive update.
+      # Review this ignore rule after 2026-09-30.
+      - dependency-name: "protobufjs"
