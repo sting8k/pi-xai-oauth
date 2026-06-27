@@ -28,7 +28,7 @@
   },
   "pi": {
     "extensions": [
-      "./extensions"
+      "./extensions/xai-oauth.ts"
     ],
     "image": "https://raw.githubusercontent.com/BlockedPath/pi-xai-oauth/main/preview.jpeg"
   },

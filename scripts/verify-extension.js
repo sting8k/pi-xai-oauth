@@ -391,10 +391,21 @@ async function verifyOAuthManualWrongStateIgnored(provider) {
   }
 }
 
+async function verifyPackageExtensionEntrypoint() {
+  const pkg = JSON.parse(await fs.readFile(path.join(repoRoot, "package.json"), "utf8"));
+  assert.deepEqual(
+    pkg.pi?.extensions,
+    ["./extensions/xai-oauth.ts"],
+    "package.json pi.extensions should point at the TypeScript entrypoint, not the extensions directory",
+  );
+}
+
 async function main() {
   process.env.HOME = path.join(repoRoot, ".tmp-empty-home-for-tests");
   process.env.XAI_API_KEY = "must-not-be-used";
   installFetchMock();
+
+  await verifyPackageExtensionEntrypoint();
 
   try {
     const firstLoad = loadExtension();
