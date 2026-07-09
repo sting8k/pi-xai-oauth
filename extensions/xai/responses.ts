@@ -2,7 +2,7 @@ import type { Api, Context, Model, SimpleStreamOptions } from "@earendil-works/p
 import { randomUUID } from "crypto";
 import { existsSync } from "fs";
 import { createRequire } from "module";
-import { join } from "path";
+import { delimiter, dirname, join } from "path";
 import { isGrokCliProxyModel, xaiBaseUrlForModel, xaiModelForRequest, xaiModelRequestHeaders, xaiResponsesUrlForModel } from "./models";
 import { rewriteXaiResponsesPayload } from "./payload";
 
@@ -15,16 +15,29 @@ type OpenAIResponsesStreamSimple = (
 
 const localRequire = createRequire(__filename);
 
+function openAIResponsesModuleCandidates() {
+  const nodeModuleRoots = new Set<string>([
+    ...module.paths,
+    ...(process.env.NODE_PATH ? process.env.NODE_PATH.split(delimiter).filter(Boolean) : []),
+    join(dirname(dirname(process.execPath)), "lib", "node_modules"),
+  ]);
+  const packageRoots = Array.from(nodeModuleRoots).flatMap((basePath) => [
+    join(basePath, "@earendil-works", "pi-ai"),
+    join(basePath, "@earendil-works", "pi-coding-agent", "node_modules", "@earendil-works", "pi-ai"),
+  ]);
+
+  return packageRoots.map((packageRoot) => join(packageRoot, "dist", "api", "openai-responses.js"));
+}
+
 function loadOpenAIResponsesModule() {
-  for (const basePath of module.paths) {
-    const candidate = join(basePath, "@earendil-works", "pi-ai", "dist", "api", "openai-responses.js");
+  const candidates = openAIResponsesModuleCandidates();
+  for (const candidate of candidates) {
     if (existsSync(candidate)) {
       return localRequire(candidate) as { streamSimple: OpenAIResponsesStreamSimple };
     }
   }
 
-  // Fallback for runtimes that support package subpath loading from CommonJS.
-  return localRequire("@earendil-works/pi-ai/api/openai-responses") as { streamSimple: OpenAIResponsesStreamSimple };
+  throw new Error(`Cannot find @earendil-works/pi-ai openai-responses helper. Searched: ${candidates.join(", ")}`);
 }
 
 function resultFromStreamEvent(event: AssistantStreamEvent): any {
