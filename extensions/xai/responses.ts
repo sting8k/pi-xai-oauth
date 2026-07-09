@@ -1,9 +1,31 @@
 import type { Api, Context, Model, SimpleStreamOptions } from "@earendil-works/pi-ai";
 import { randomUUID } from "crypto";
+import { existsSync } from "fs";
+import { createRequire } from "module";
+import { join } from "path";
 import { isGrokCliProxyModel, xaiBaseUrlForModel, xaiModelForRequest, xaiModelRequestHeaders, xaiResponsesUrlForModel } from "./models";
 import { rewriteXaiResponsesPayload } from "./payload";
 
 type AssistantStreamEvent = Record<string, any>;
+type OpenAIResponsesStreamSimple = (
+  model: Model<"openai-responses">,
+  context: Context,
+  options?: SimpleStreamOptions,
+) => AsyncIterable<AssistantStreamEvent>;
+
+const localRequire = createRequire(__filename);
+
+function loadOpenAIResponsesModule() {
+  for (const basePath of module.paths) {
+    const candidate = join(basePath, "@earendil-works", "pi-ai", "dist", "api", "openai-responses.js");
+    if (existsSync(candidate)) {
+      return localRequire(candidate) as { streamSimple: OpenAIResponsesStreamSimple };
+    }
+  }
+
+  // Fallback for runtimes that support package subpath loading from CommonJS.
+  return localRequire("@earendil-works/pi-ai/api/openai-responses") as { streamSimple: OpenAIResponsesStreamSimple };
+}
 
 function resultFromStreamEvent(event: AssistantStreamEvent): any {
   if (event.type === "done") return event.message;
@@ -176,7 +198,7 @@ export function streamSimpleXaiResponses(model: Model<Api>, context: Context, op
   const stream = createForwardingAssistantStream();
   void (async () => {
     try {
-      const { streamSimple } = await import("@earendil-works/pi-ai/api/openai-responses");
+      const { streamSimple } = loadOpenAIResponsesModule();
       const inner = streamSimple(openAIResponsesModel as Model<"openai-responses">, context, {
         ...options,
         // Ensure rewriteXaiResponsesPayload can always stamp prompt_cache_key.
