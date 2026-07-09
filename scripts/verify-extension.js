@@ -197,7 +197,7 @@ async function captureStreamResultMessage(createStream) {
 }
 
 async function verifyRealGuardSemantics() {
-  const { streamSimpleOpenAIResponses } = await import("@earendil-works/pi-ai");
+  const { streamSimple } = await import("@earendil-works/pi-ai/api/openai-responses");
   const context = { messages: [{ role: "user", content: "hello", timestamp: Date.now() }] };
   const baseModel = {
     id: "grok-4.3",
@@ -208,18 +208,10 @@ async function verifyRealGuardSemantics() {
     input: ["text", "image"],
   };
 
-  const rejectedMessage = await captureStreamResultMessage(() =>
-    streamSimpleOpenAIResponses({ ...baseModel, api: "xai-responses" }, context, { apiKey: "oauth-token" }),
-  );
-  assert.match(
-    rejectedMessage,
-    /Mismatched api/,
-    "installed @earendil-works/pi-ai must API-guard openai-responses (bump dev dep to 0.79.8)",
-  );
 
   const before = requests.length;
   const acceptedMessage = await captureStreamResultMessage(() =>
-    streamSimpleOpenAIResponses({ ...baseModel, api: "openai-responses" }, context, { apiKey: "oauth-token" }),
+    streamSimple({ ...baseModel, api: "openai-responses" }, context, { apiKey: "oauth-token" }),
   );
   assert.doesNotMatch(acceptedMessage, /Mismatched api/, "an openai-responses model must satisfy the real guard");
   assert.ok(
@@ -415,6 +407,14 @@ async function main() {
     assert.ok(provider, "xai-auth provider should be registered");
     assert.equal(secondLoad.tools.size, tools.size, "extension reloads should register tools on the new pi API object");
     assert.equal(provider.api, "xai-responses");
+    const grok45 = provider.models.find((model) => model.id === "grok-4.5");
+    assert.ok(grok45, "grok-4.5 should be registered in the xAI model catalog");
+    assert.equal(grok45?.contextWindow, 500_000);
+    assert.equal(grok45?.reasoning, true);
+    assert.equal(grok45?.cost.input, 2);
+    assert.equal(grok45?.cost.cacheRead, 0.5);
+    assert.equal(grok45?.cost.output, 6);
+    assert.equal(grok45?.thinkingLevelMap?.off, null, "Grok 4.5 reasoning cannot be disabled");
     assert.equal(provider.models.find((model) => model.id === "grok-4.3")?.contextWindow, 1_000_000);
     assert.equal(provider.models.find((model) => model.id === "grok-build")?.contextWindow, 512_000);
     assert.equal(provider.models.find((model) => model.id === "grok-composer-2.5-fast")?.contextWindow, 200_000);
@@ -440,6 +440,13 @@ async function main() {
       },
     });
     assert.match(noAuthResult.content[0].text, /No xAI OAuth credentials/, "tools should not fall back to XAI_API_KEY");
+
+    const { body: grok45TextBody } = await runTool(tools, "xai_generate_text", {
+      prompt: "hi",
+      model: "grok-4.5",
+    });
+    assert.equal(grok45TextBody.model, "grok-4.5", "xai_generate_text should support explicit Grok 4.5 requests");
+    assert.equal(grok45TextBody.reasoning.effort, "high", "Grok 4.5 text generation should default to high reasoning");
 
     const { body: composerBody, request: composerRequest } = await runTool(
       tools,
@@ -486,6 +493,43 @@ async function main() {
 
     const { body: imageGenBody } = await runTool(tools, "xai_generate_image", { prompt: "a crisp diagram" }, /Generated 1 image/);
     assert.equal(imageGenBody.model, "grok-imagine-image-quality");
+    const imageTool = tools.get("xai_generate_image");
+    assert.equal(Object.hasOwn(imageGenBody, "size"), false, "image generation should not send unsupported size defaults");
+    assert.equal(Object.hasOwn(imageGenBody, "n"), false, "image generation should not send n unless explicitly requested");
+    assert.equal(imageTool.parameters.properties.size, undefined, "image tool schema should not advertise unsupported size");
+    assert.equal(imageTool.parameters.properties.n.default, undefined, "image tool schema should not inject n when omitted");
+    assert.equal(imageTool.parameters.properties.n.minimum, 1, "image tool schema should reject image counts below one");
+    assert.equal(imageTool.parameters.properties.n.maximum, 4, "image tool schema should reject image counts above four");
+
+    const { body: imageBatchBody } = await runTool(
+      tools,
+      "xai_generate_image",
+      { prompt: "three crisp diagrams", n: 3 },
+      /Generated 1 image/,
+    );
+    assert.equal(imageBatchBody.n, 3, "image generation should forward an explicit n value");
+    assert.equal(Object.hasOwn(imageBatchBody, "size"), false, "explicit n requests should still omit size");
+
+    const requestsBeforeUnsupportedSize = requests.length;
+    const unsupportedSizeResult = await imageTool.execute(
+      "call_unsupported_size",
+      { prompt: "a crisp diagram", size: "1024x1024" },
+      undefined,
+      () => {},
+      authContext(),
+    );
+    assert.match(unsupportedSizeResult.content[0].text, /does not support the 'size' parameter/);
+    assert.equal(requests.length, requestsBeforeUnsupportedSize, "unsupported size should fail before sending a request");
+
+    const invalidCountResult = await imageTool.execute(
+      "call_invalid_image_count",
+      { prompt: "a crisp diagram", n: 0 },
+      undefined,
+      () => {},
+      authContext(),
+    );
+    assert.match(invalidCountResult.content[0].text, /must be an integer from 1 to 4/);
+    assert.equal(requests.length, requestsBeforeUnsupportedSize, "invalid n should fail before sending a request");
 
     const { body: multiAgentBody, result: multiAgentResult } = await runTool(tools, "xai_multi_agent", { query: "latest xAI tools", num_agents: 4 });
     assert.equal(multiAgentBody.model, "grok-4.20-multi-agent-0309");

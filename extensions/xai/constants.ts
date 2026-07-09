@@ -15,7 +15,7 @@ export const XAI_IMAGES_GENERATIONS_URL = "https://api.x.ai/v1/images/generation
 export const XAI_GROK_CLIENT_VERSION = "0.2.16";
 
 export const XAI_PROVIDER_ID = "xai-auth";
-export const DEFAULT_XAI_MODEL = "grok-4.3";
+export const DEFAULT_XAI_MODEL = "grok-4.5";
 export const DEFAULT_XAI_IMAGE_MODEL = "grok-imagine-image-quality";
 
 export const XAI_CURSOR_TOOL_NAMES = ["Read", "Write", "StrReplace", "Edit", "Delete", "LS", "Grep", "Glob", "Shell", "WebSearch"];

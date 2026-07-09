@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * pi-xai-oauth — One-command installer for xAI (Grok) OAuth + Grok 4.3
+ * pi-xai-oauth — One-command installer for xAI (Grok) OAuth + Grok 4.5
  * Enhanced with --scaffold support for 2026 agent best practices
  */
 
@@ -29,7 +29,7 @@ function color(text, c) {
 
 function printHeader() {
   console.log(`\n${color("🚀  pi-xai-oauth", "cyan")} — ${color("xAI Grok + OAuth for pi", "bold")}\n`);
-  console.log("   One-command setup for Grok 4.3, Grok Build, and Composer 2.5 with clean OAuth login.\n");
+  console.log("   One-command setup for Grok 4.5, Grok Build, and Composer 2.5 with clean OAuth login.\n");
 }
 
 function checkPi() {
@@ -97,10 +97,10 @@ function updateSettings() {
     console.log(color("   + Set defaultProvider: xai-auth", "green"));
   }
 
-  if (settings.defaultModel !== "grok-4.3") {
-    settings.defaultModel = "grok-4.3";
+  if (settings.defaultModel !== "grok-4.5") {
+    settings.defaultModel = "grok-4.5";
     changed = true;
-    console.log(color("   + Set defaultModel: grok-4.3", "green"));
+    console.log(color("   + Set defaultModel: grok-4.5", "green"));
   }
 
   if (settings.defaultThinkingLevel !== "high") {
@@ -130,13 +130,13 @@ function printNextSteps(nonInteractive = false) {
     console.log("Next steps:\n");
     console.log(`   ${color("1.", "bold")} Authenticate with xAI OAuth:`);
     console.log(`      ${color("pi /login xai-auth", "cyan")}\n`);
-    console.log(`   ${color("2.", "bold")} Start chatting with Grok 4.3 (already set as default)`);
+    console.log(`   ${color("2.", "bold")} Start chatting with Grok 4.5 (already set as default)`);
     console.log(`      ${color("pi", "cyan")}\n`);
   } else {
-    console.log("Grok 4.3, Grok Build, Composer 2.5 + xAI OAuth are now configured and ready.\n");
+    console.log("Grok 4.5, Grok 4.3, Grok Build, Composer 2.5 + xAI OAuth are now configured and ready.\n");
   }
 
-  console.log("You now have access to powerful reasoning, coding models, and 1M context!\n");
+  console.log("You now have access to powerful reasoning, coding models, and long context!\n");
   console.log("Bonus tools available:");
   console.log("   • xai_generate_text     — Generate text with full reasoning");
   console.log("   • xai_multi_agent       — Multi-agent research with web/X tools");
@@ -239,7 +239,7 @@ Update this file frequently.`,
 **Date:** ${date}
 
 ## Key Context
-- This project provides xAI OAuth + Grok 4.3 for pi agents.
+- This project provides xAI OAuth + Grok 4.5 for pi agents.
 - Use subagent tool for delegation.
 - Persistent state lives in .scaffold/.
 

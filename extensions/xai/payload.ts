@@ -152,10 +152,18 @@ export function rewriteXaiResponsesPayload(payload: unknown, model: Model<Api>, 
     if (body.include.length === 0) delete body.include;
   }
 
-  // xAI doesn't implement OpenAI's prompt_cache_retention knob. Keep the
-  // cache key (xAI documents it as a body field), but remove retention.
+  // xAI doesn't implement OpenAI's prompt_cache_retention knobs. Keep the
+  // cache key (Responses API body field), but remove retention.
+  // Docs: https://docs.x.ai/developers/advanced-api-usage/prompt-caching/maximizing-cache-hits
+  // prompt_cache_key routes a conversation to the same server so cache hits
+  // are reliable; without it multi-turn agent loops often pay full input price.
   delete body.prompt_cache_retention;
-  if (options?.sessionId && !body.prompt_cache_key) body.prompt_cache_key = options.sessionId;
+  const cacheKey =
+    (typeof body.prompt_cache_key === "string" && body.prompt_cache_key.trim()) ||
+    (typeof options?.sessionId === "string" && options.sessionId.trim()) ||
+    "";
+  if (cacheKey) body.prompt_cache_key = cacheKey;
+  else delete body.prompt_cache_key;
 
   return body;
 }

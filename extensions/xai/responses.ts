@@ -148,13 +148,19 @@ export async function createXaiResponse(apiKey: string, body: Record<string, any
  * @returns A forwarding assistant stream compatible with pi's async iterator and `result()` contract.
  */
 export function streamSimpleXaiResponses(model: Model<Api>, context: Context, options?: SimpleStreamOptions) {
-  const grokCliSessionId = options?.sessionId || (isGrokCliProxyModel(model.id) ? randomUUID() : undefined);
+  // Prefer pi's stable session id for cache routing. For Grok CLI proxy only,
+  // fall back to a per-stream id so x-grok-conv-id is always present.
+  // Docs: Responses API uses body.prompt_cache_key; Chat Completions / CLI
+  // proxy also benefit from the x-grok-conv-id header.
+  // https://docs.x.ai/developers/advanced-api-usage/prompt-caching/maximizing-cache-hits
+  const sessionId = options?.sessionId;
+  const routingSessionId = sessionId || (isGrokCliProxyModel(model.id) ? randomUUID() : undefined);
   const streamModel = {
     ...model,
     baseUrl: xaiBaseUrlForModel(model.id),
     headers: {
       ...(model as any).headers,
-      ...xaiModelRequestHeaders(model.id, grokCliSessionId),
+      ...xaiModelRequestHeaders(model.id, routingSessionId),
     },
   };
   // pi 0.79.8+ API-guards the OpenAI Responses helper; keep the xAI
@@ -165,17 +171,22 @@ export function streamSimpleXaiResponses(model: Model<Api>, context: Context, op
     api: "openai-responses" as const,
   };
   const headers = { ...(options?.headers || {}) };
-  if (grokCliSessionId && !headers["x-grok-conv-id"]) headers["x-grok-conv-id"] = grokCliSessionId;
+  if (routingSessionId && !headers["x-grok-conv-id"]) headers["x-grok-conv-id"] = routingSessionId;
 
   const stream = createForwardingAssistantStream();
   void (async () => {
     try {
-      const { streamSimpleOpenAIResponses } = await import("@earendil-works/pi-ai");
-      const inner = streamSimpleOpenAIResponses(openAIResponsesModel as Model<"openai-responses">, context, {
+      const { streamSimple } = await import("@earendil-works/pi-ai/api/openai-responses");
+      const inner = streamSimple(openAIResponsesModel as Model<"openai-responses">, context, {
         ...options,
+        // Ensure rewriteXaiResponsesPayload can always stamp prompt_cache_key.
+        sessionId: sessionId || routingSessionId,
         headers,
         async onPayload(payload) {
-          const rewritten = rewriteXaiResponsesPayload(payload, streamModel, options);
+          const rewritten = rewriteXaiResponsesPayload(payload, streamModel, {
+            ...options,
+            sessionId: sessionId || routingSessionId,
+          });
           const userRewritten = await options?.onPayload?.(rewritten, streamModel);
           return userRewritten === undefined ? rewritten : userRewritten;
         },

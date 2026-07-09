@@ -11,6 +11,25 @@ import {
 
 export const MODELS = [
   {
+    id: "grok-4.5",
+    name: "Grok 4.5",
+    reasoning: true,
+    input: ["text", "image"],
+    cost: { input: 2, output: 6, cacheRead: 0.5, cacheWrite: 0 },
+    contextWindow: 500_000,
+    // xAI has not published a Grok 4.5-specific max output limit yet;
+    // keep the existing Grok Responses ceiling until official metadata is available.
+    maxTokens: 131_072,
+    thinkingLevelMap: {
+      off: null,
+      minimal: "low",
+      low: "low",
+      medium: "medium",
+      high: "high",
+      xhigh: null,
+    },
+  },
+  {
     id: "grok-4.3",
     name: "Grok 4.3",
     reasoning: true,
@@ -134,6 +153,7 @@ export function grokSupportsReasoningEffort(modelId: string): boolean {
   return (
     normalized.startsWith("grok-3-mini") ||
     normalized.startsWith("grok-4.20-multi-agent") ||
-    normalized.startsWith("grok-4.3")
+    normalized.startsWith("grok-4.3") ||
+    normalized.startsWith("grok-4.5")
   );
 }
