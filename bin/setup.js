@@ -10,7 +10,7 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-const NPM_SPEC = "npm:pi-xai-oauth";
+const INSTALL_SPEC = "git:github.com/sting8k/pi-xai-oauth@main";
 const SETTINGS_PATH = path.join(os.homedir(), ".pi/agent/settings.json");
 
 // ANSI colors
@@ -44,12 +44,12 @@ function checkPi() {
 function installPackage() {
   console.log(color("📦 Installing pi-xai-oauth into pi...", "cyan"));
   try {
-    execSync(`pi install ${NPM_SPEC}`, { stdio: "inherit" });
+    execSync(`pi install ${INSTALL_SPEC}`, { stdio: "inherit" });
     console.log(color("\n✅ Package installed successfully!", "green"));
     return true;
   } catch (err) {
     console.error(color("\n❌ Failed to run 'pi install'.", "red"));
-    console.log(`Please run manually:  ${color(`pi install ${NPM_SPEC}`, "yellow")}`);
+    console.log(`Please run manually:  ${color(`pi install ${INSTALL_SPEC}`, "yellow")}`);
     return false;
   }
 }
@@ -80,15 +80,15 @@ function updateSettings() {
   }
 
   const hasPackage = settings.packages.some(p => {
-    if (typeof p === "string") return p === NPM_SPEC;
-    if (p && typeof p === "object") return p.source === NPM_SPEC;
+    if (typeof p === "string") return p === INSTALL_SPEC;
+    if (p && typeof p === "object") return p.source === INSTALL_SPEC;
     return false;
   });
 
   if (!hasPackage) {
-    settings.packages.push(NPM_SPEC);
+    settings.packages.push(INSTALL_SPEC);
     changed = true;
-    console.log(color("   + Added npm:pi-xai-oauth to packages", "green"));
+    console.log(color("   + Added git:github.com/sting8k/pi-xai-oauth@main to packages", "green"));
   }
 
   if (settings.defaultProvider !== "xai-auth") {
@@ -140,14 +140,9 @@ function printNextSteps(nonInteractive = false) {
   console.log("Bonus tools available:");
   console.log("   • xai_generate_text     — Generate text with full reasoning");
   console.log("   • xai_multi_agent       — Multi-agent research with web/X tools");
-  console.log("   • xai_web_search        — Native xAI web search");
-  console.log("   • xai_x_search          — Native X/Twitter search");
-  console.log("   • xai_code_execution    — Native code interpreter");
   console.log("   • xai_generate_image    — Image generation");
-  console.log("   • xai_analyze_image     — Image analysis");
-  console.log("   • xai_critique          — Structured critique");
-  console.log("   • xai_deep_research     — Deep research with web/X tools\n");
-  console.log(`   Update later: ${color("pi update npm:pi-xai-oauth", "yellow")}\n`);
+  console.log("   • xai_analyze_image     — Image analysis\n");
+  console.log(`   Update later: ${color(`pi update ${INSTALL_SPEC}`, "yellow")}\n`);
 }
 
 function printScaffoldHeader() {
@@ -277,7 +272,7 @@ pi-xai-oauth — xAI OAuth provider for pi framework.
 
 ## Commands
 - Scaffold: node bin/setup.js --scaffold
-- Install: pi install npm:pi-xai-oauth
+- Install: pi install ${INSTALL_SPEC}
 
 ## Workflow
 - Always use feature branches

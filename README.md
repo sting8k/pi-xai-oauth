@@ -11,12 +11,12 @@
 
 **xAI (Grok) OAuth provider for pi** — 1M context, reasoning, and custom xAI tools.
 ```bash
-npx pi-xai-oauth
+pi install git:github.com/sting8k/pi-xai-oauth@main
 ```
 
-This package adds **Grok 4.3**, **Grok Build**, and **Composer 2.5** as fully-integrated xAI OAuth models in pi, with proper OAuth login, automatic token refresh, and a suite of custom tools (`xai_generate_text`, `xai_web_search`, `xai_x_search`, etc.).
+This package adds **Grok 4.5**, **Grok 4.3**, **Grok Build**, and **Composer 2.5** as fully-integrated xAI OAuth models in pi, with proper OAuth login, automatic token refresh, and a slim suite of custom tools (`xai_generate_text`, `xai_multi_agent`, `xai_generate_image`, and `xai_analyze_image`).
 
-> **Latest compatibility note:** `pi-xai-oauth` 1.2.4+ supports pi 0.79.8+'s OpenAI Responses API guard for Grok/xAI streaming. Existing npm installs should run `pi update npm:pi-xai-oauth`; local checkout installs should keep only one copy installed with `pi remove npm:pi-xai-oauth && pi install .`.
+> **Latest compatibility note:** this fork's `main` branch supports pi 0.80.3, Grok 4.5, and the slim toolset. Remove older npm/local copies before installing `git:github.com/sting8k/pi-xai-oauth@main`.
 
 ---
 
@@ -46,13 +46,13 @@ This package adds **Grok 4.3**, **Grok Build**, and **Composer 2.5** as fully-in
 - **Automatic browser open** — pi opens your default browser automatically; fall back to manual paste if needed
 - **Token refresh** — refresh tokens are stored and rotated automatically before expiry
 - **Reuses existing credentials** — auto-detects `~/.grok/auth.json` from the official Grok CLI
-- **1M context window** — Grok 4.3's full context, no truncation
+- **Modern Grok models** — Grok 4.5 by default, plus Grok 4.3 with 1M context
 - **Coding models** — Grok Build and Composer 2.5 Fast are available from the same `xai-auth` provider
 - **Reasoning support** — configurable thinking levels: `low` / `medium` / `high`
-- **Custom xAI tools** — generate text, web search, X/Twitter search, multi-agent research, code analysis
+- **Slim custom xAI tools** — generate text, multi-agent research, image generation, and image analysis
 - **Modern API** — uses OpenAI's `responses` API format via `https://api.x.ai/v1`, with Grok CLI endpoint routing for CLI-only models
 
-> **✅ Verified (May 2026)**: All custom xAI tools (`xai_generate_text`, `xai_x_search`, `xai_web_search`, `xai_code_execution`, `xai_critique`, `xai_multi_agent`, `xai_deep_research`, image tools, etc.) have been tested end-to-end after the OAuth + payload repair. The provider now correctly handles mixed-model requests and native xAI tool shapes.
+> **✅ Verified (May 2026)**: The slim custom toolset (`xai_generate_text`, `xai_multi_agent`, `xai_generate_image`, `xai_analyze_image`) has been tested end-to-end. The provider handles mixed-model requests, Grok CLI endpoint routing, OAuth, and native xAI tool shapes.
 
 ---
 
@@ -73,23 +73,13 @@ If localhost callbacks are blocked (VPN, Docker, remote dev), the TUI shows a te
 
 ## Installation
 
-### One-command install (recommended)
+### Git install from this fork
 
 ```bash
-npx pi-xai-oauth
+pi install git:github.com/sting8k/pi-xai-oauth@main
 ```
 
-This runs the setup script which:
-1. Installs `npm:pi-xai-oauth` into pi
-2. Sets `xai-auth` as your default provider
-3. Sets `grok-4.3` as your default model
-4. Enables `high` thinking level by default
-
-### Manual install
-
-```bash
-pi install npm:pi-xai-oauth
-```
+This installs the slim fork build with Grok 4.5 and without Cursor/Grok CLI shim tools.
 
 Then optionally configure it as default:
 
@@ -97,31 +87,25 @@ Then optionally configure it as default:
 # In ~/.pi/agent/settings.json:
 {
   "defaultProvider": "xai-auth",
-  "defaultModel": "grok-4.3",
+  "defaultModel": "grok-4.5",
   "defaultThinkingLevel": "high"
 }
 ```
 
 > **⚠️ Important: install only one copy**
 >
-> `pi-xai-oauth` registers fixed tool names such as `xai_generate_text`, `xai_web_search`, and `xai_x_search`. If you install more than one copy — for example `npm:pi-xai-oauth` plus a local checkout, or two different local checkouts — pi will fail to start with `Tool "xai_generate_text" conflicts with ...` errors.
+> `pi-xai-oauth` registers fixed tool names such as `xai_generate_text`, `xai_multi_agent`, and `xai_generate_image`. If you install more than one copy — for example `npm:pi-xai-oauth` plus this git fork, or two different local checkouts — pi will fail to start with `Tool "xai_generate_text" conflicts with ...` errors.
 >
 > Check with:
 > ```bash
 > pi list
 > ```
 >
-> For local development, keep only this checkout:
+> For the slim fork, keep only the git main install:
 > ```bash
 > pi remove npm:pi-xai-oauth
 > pi remove /path/to/other/pi-xai-oauth-copy
-> pi install .
-> ```
->
-> For the published npm package, remove local checkouts:
-> ```bash
-> pi remove /path/to/local/pi-xai-oauth-copy
-> pi install npm:pi-xai-oauth
+> pi install git:github.com/sting8k/pi-xai-oauth@main
 > ```
 >
 > Use the exact package spec/path shown by `pi list` when removing duplicates.
@@ -167,14 +151,15 @@ pi "Explain quantum computing like I'm 5"
 Or use a specific model:
 
 ```bash
-pi --model grok-4.3 "Write a poem about Rust"
+pi --model grok-4.5 "Write a poem about Rust"
 ```
 
 ### Switching Models
 
 | Model ID | Description |
 |----------|-------------|
-| `grok-4.3` | **Default.** Full reasoning, 1M context. |
+| `grok-4.5` | **Default.** Latest Grok reasoning model, 500K context. |
+| `grok-4.3` | Full reasoning, 1M context. |
 | `grok-build` | Grok Build coding model via the Grok CLI OAuth endpoint, 512K context. |
 | `grok-composer-2.5-fast` | Composer 2.5 Fast coding model via the Grok CLI OAuth endpoint, 200K context. |
 | `grok-4.20-0309-reasoning` | Grok 4.20 with automatic reasoning, 2M context. |
@@ -184,6 +169,7 @@ pi --model grok-4.3 "Write a poem about Rust"
 From the pi TUI:
 
 ```
+/model grok-4.5
 /model grok-4.3
 /model grok-build
 /model grok-composer-2.5-fast
@@ -194,7 +180,7 @@ From the pi TUI:
 From the command line:
 
 ```bash
-pi --model grok-4.3 "Your prompt here"
+pi --model grok-4.5 "Your prompt here"
 pi --model grok-build "Implement this feature"
 pi --model grok-composer-2.5-fast "Refactor this module"
 pi --model grok-4.20-0309-non-reasoning "Quick answer"
@@ -202,7 +188,7 @@ pi --model grok-4.20-0309-non-reasoning "Quick answer"
 
 ### Reasoning / Thinking Levels
 
-Grok 4.3 supports configurable thinking levels:
+Grok 4.5 and Grok 4.3 support configurable thinking levels:
 
 ```
 /think high
@@ -213,7 +199,7 @@ Grok 4.3 supports configurable thinking levels:
 Or via CLI:
 
 ```bash
-pi --model grok-4.3:high "Solve a complex math problem"
+pi --model grok-4.5:high "Solve a complex math problem"
 pi --model grok-4.3:low "What's the weather?"
 ```
 
@@ -223,31 +209,13 @@ pi --model grok-4.3:low "What's the weather?"
 
 `grok-build` and `grok-composer-2.5-fast` are routed through xAI's Grok CLI OAuth endpoint using the same X account OAuth token. `grok-composer-2.5-fast` does not accept configurable reasoning effort. `grok-4.20-0309-reasoning` reasons automatically and does not accept a configurable effort parameter. `grok-4.20-multi-agent-0309` uses `medium` for 4 agents and `high` for 16 agents.
 
-### Composer / Grok Build Tool Compatibility
-
-Composer 2.5 and Grok Build are trained against Cursor/Grok CLI-style tool names. When either `grok-composer-2.5-fast` or `grok-build` is selected, this package automatically enables compatibility shims that map those tool calls onto pi's built-in tools:
-
-| Cursor/Grok CLI tool | pi tool used underneath |
-|----------------------|-------------------------|
-| `Read` | `read` |
-| `Write` | `write` |
-| `StrReplace` / `Edit` | `edit` |
-| `Delete` | workspace-safe file delete |
-| `LS` | `ls` |
-| `Grep` | `grep` |
-| `Glob` | `find` |
-| `Shell` | `bash` |
-| `WebSearch` | xAI native web search |
-
-The shims also normalize common Cursor argument names, such as `file_path`, `contents`, `old_string` / `new_string`, `query`, `include`, `glob_filter`, and `cmd`. They are disabled again when you switch back to non-Grok-CLI models such as `grok-4.3`.
-
 ---
 
 ## Custom Tools
 
 This package registers OAuth-backed custom tools that use the xAI API directly. They appear alongside your other agent tools in the pi TUI and are available to any agent running with the `xai-auth` provider.
 
-**How to use them:** Simply call the tool by name in your prompts or agent workflows (e.g. "use xai_web_search to find the latest Rust news"). The tools automatically use your authenticated xAI session.
+**How to use them:** Simply call the tool by name in your prompts or agent workflows (e.g. "use xai_generate_text with reasoning effort high"). The tools automatically use your authenticated xAI session.
 
 > **Tip:** See the ⚠️ warning above about local vs published package conflicts.
 
@@ -257,7 +225,7 @@ Generate text with full reasoning and stateful conversations.
 ```json
 {
   "prompt": "Explain neural networks",
-  "model": "grok-4.3",
+  "model": "grok-4.5",
   "reasoning_effort": "high"
 }
 ```
@@ -273,32 +241,8 @@ Deep multi-agent research using Grok's multi-agent model plus native web and X s
 }
 ```
 
-### `xai_web_search`
-Search the web using xAI's native `web_search` tool.
 
-```json
-{
-  "query": "Rust vs Go performance 2026"
-}
-```
 
-### `xai_x_search`
-Search X (Twitter) using xAI's native `x_search` tool.
-
-```json
-{
-  "query": "grok 4.3"
-}
-```
-
-### `xai_code_execution`
-Run Python-oriented analysis using xAI's native `code_interpreter` tool.
-
-```json
-{
-  "code": "print(sum(range(100)))"
-}
-```
 
 ### `xai_generate_image`
 Generate images with xAI's current image generation model.
@@ -320,25 +264,7 @@ Analyze an image URL, data URL, or local `.png` / `.jpg` path with Grok vision.
 }
 ```
 
-### `xai_critique`
-Get structured critique for code, designs, writing, or ideas.
 
-```json
-{
-  "content": "function add(a,b){ return a-b }",
-  "aspect": "code correctness"
-}
-```
-
-### `xai_deep_research`
-Research a topic with Grok reasoning plus native web and X search tools.
-
-```json
-{
-  "topic": "Recent xAI Responses API tool changes",
-  "depth": "high"
-}
-```
 
 > **Note:** These tools use the xAI API under the hood — they count toward your SuperGrok rate limits.
 
@@ -348,14 +274,14 @@ Research a topic with Grok reasoning plus native web and X search tools.
 
 | Action | Command |
 |--------|---------|
-| Install | `pi install npm:pi-xai-oauth` |
-| One-command setup | `npx pi-xai-oauth` |
-| Try ephemeral | `pi -e npm:pi-xai-oauth` |
+| Install | `pi install git:github.com/sting8k/pi-xai-oauth@main` |
+| One-command setup | `node bin/setup.js` from this checkout |
+| Try ephemeral | `pi -e git:github.com/sting8k/pi-xai-oauth@main` |
 | Authenticate | `pi /login xai-auth` |
-| Update | `pi update npm:pi-xai-oauth` |
-| Remove | `pi remove npm:pi-xai-oauth` |
+| Update | `pi update git:github.com/sting8k/pi-xai-oauth@main` |
+| Remove | `pi remove git:github.com/sting8k/pi-xai-oauth@main` |
 | List packages | `pi list` |
-| Set default model | `/model grok-4.3` (in TUI) |
+| Set default model | `/model grok-4.5` (in TUI) |
 | Set thinking level | `/think high` (in TUI) |
 
 ---
@@ -383,7 +309,7 @@ If localhost is blocked (VPN, Docker, remote SSH, WSL):
 Run `pi list` to verify the package is installed. If not:
 
 ```bash
-pi install npm:pi-xai-oauth
+pi install git:github.com/sting8k/pi-xai-oauth@main
 ```
 
 Then run `pi /list-providers` — you should see `xai-auth` listed.
@@ -444,11 +370,11 @@ pi remove /path/to/old/pi-xai-oauth-copy
 pi install .
 ```
 
-For normal npm usage:
+For the git fork install:
 
 ```bash
 pi remove /path/to/local/pi-xai-oauth-copy
-pi install npm:pi-xai-oauth
+pi install git:github.com/sting8k/pi-xai-oauth@main
 ```
 
 Restart pi after cleanup. `pi list` should show only one `pi-xai-oauth` entry.
@@ -458,25 +384,19 @@ Restart pi after cleanup. `pi list` should show only one `pi-xai-oauth` entry.
 ## Updating
 
 ```bash
-pi update npm:pi-xai-oauth
+pi update git:github.com/sting8k/pi-xai-oauth@main
 ```
 
-This pulls the latest version from npm and updates your installed extension.
+This pulls the latest `main` from the fork and updates your installed extension.
 
-pi 0.79.8+ enforces an OpenAI Responses API guard. `pi-xai-oauth` 1.2.4 handles that guard for Grok/xAI streaming. If you installed the published npm package, update with the command above. If you are testing a local checkout instead, reinstall the checkout:
-
-```bash
-pi remove npm:pi-xai-oauth && pi install .
-```
-
-If you previously installed a local checkout with `pi install .`, `pi update npm:pi-xai-oauth` will not replace that local copy. Run `pi list` and make sure only one `pi-xai-oauth` entry is installed. Remove duplicate npm/local/worktree copies before restarting pi.
+If you previously installed the npm package or a local checkout, `pi update git:github.com/sting8k/pi-xai-oauth@main` will not replace that other copy. Run `pi list` and make sure only one `pi-xai-oauth` entry is installed. Remove duplicate npm/local/worktree copies before restarting pi.
 
 ---
 
 ## Uninstalling
 
 ```bash
-pi remove npm:pi-xai-oauth
+pi remove git:github.com/sting8k/pi-xai-oauth@main
 ```
 
 This removes the extension from pi's package list. Your stored OAuth tokens remain in pi's credential store.
@@ -549,7 +469,7 @@ pi-xai-oauth/
 │       ├── oauth.ts          # OAuth discovery/login/refresh/callback helpers
 │       ├── payload.ts        # xAI Responses payload normalization
 │       ├── responses.ts      # xAI request + streaming helpers
-│       └── tools/            # Custom xAI tools + Cursor/Grok CLI shims
+│       └── tools/            # Slim OAuth-backed custom xAI tools
 ├── bin/
 │   └── setup.js              # One-command setup (npx pi-xai-oauth)
 ├── scripts/
@@ -569,7 +489,7 @@ pi-xai-oauth/
 npm publish
 
 # Users update with:
-# pi update npm:pi-xai-oauth
+# pi update git:github.com/sting8k/pi-xai-oauth@main
 ```
 
 ---

@@ -41,7 +41,7 @@ pi-xai-oauth/
 │       ├── auth.ts       # Credential reuse + token resolution helpers
 │       ├── payload.ts    # Responses payload normalization
 │       ├── responses.ts  # xAI request/stream helpers
-│       └── tools/        # Custom xAI tools + Cursor/Grok CLI shims
+│       └── tools/        # Slim OAuth-backed custom xAI tools
 ├── package.json
 ├── tsconfig.json
 ├── README.md
