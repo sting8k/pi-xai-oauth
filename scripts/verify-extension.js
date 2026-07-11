@@ -109,29 +109,14 @@ function authContext() {
   };
 }
 
-async function runTool(tools, name, params = {}, expectedText = "OK", requestOrigin = "https://api.x.ai") {
-  const controller = new AbortController();
-  const before = requests.length;
-  const result = await tools.get(name).execute("call_test", params, controller.signal, () => {}, authContext());
-  const request = requests.slice(before).find((entry) => entry.url && urlOriginIs(entry.url, requestOrigin));
-  if (expectedText instanceof RegExp) {
-    assert.match(result.content[0].text, expectedText, `${name} should surface mocked xAI text`);
-  } else {
-    assert.equal(result.content[0].text, expectedText, `${name} should surface mocked xAI text`);
-  }
-  assert.ok(request, `${name} should send a request`);
-  assert.equal(headerValue(request.headers, "Authorization"), "Bearer oauth-token", `${name} should use OAuth token from pi model registry`);
-  assert.strictEqual(request.signal, controller.signal, `${name} should pass the pi cancellation signal`);
-  return { body: request.body, request, result };
-}
-
-
-function verifySlimToolset(tools) {
-  for (const name of ["xai_generate_text", "xai_multi_agent", "xai_generate_image", "xai_analyze_image"]) {
-    assert.ok(tools.has(name), `${name} should remain registered`);
-  }
+function verifyProviderOnlyToolset(tools) {
+  assert.equal(tools.size, 0, "provider-only extension should not register custom tools");
 
   for (const name of [
+    "xai_generate_text",
+    "xai_multi_agent",
+    "xai_generate_image",
+    "xai_analyze_image",
     "xai_web_search",
     "xai_x_search",
     "xai_code_execution",
@@ -148,7 +133,7 @@ function verifySlimToolset(tools) {
     "Shell",
     "WebSearch",
   ]) {
-    assert.ok(!tools.has(name), `${name} should not be registered in the slim toolset`);
+    assert.ok(!tools.has(name), `${name} should not be registered by the provider-only extension`);
   }
 }
 
@@ -395,106 +380,13 @@ async function main() {
     await verifyXaiStreamPassesRealGuard(provider);
 
     await verifyCliModelStreamRouting(provider);
-    verifySlimToolset(tools);
+    verifyProviderOnlyToolset(tools);
 
     await verifyOAuthCallbackState(provider);
     await verifyOAuthManualRawCode(provider);
     await verifyOAuthManualCallbackUrlState(provider);
     await verifyOAuthManualWrongStateIgnored(provider);
 
-    const noAuthResult = await tools.get("xai_generate_text").execute("call_noauth", { prompt: "hi" }, undefined, () => {}, {
-      modelRegistry: {
-        find: () => undefined,
-      },
-    });
-    assert.match(noAuthResult.content[0].text, /No xAI OAuth credentials/, "tools should not fall back to XAI_API_KEY");
-
-    const { body: grok45TextBody } = await runTool(tools, "xai_generate_text", {
-      prompt: "hi",
-      model: "grok-4.5",
-    });
-    assert.equal(grok45TextBody.model, "grok-4.5", "xai_generate_text should support explicit Grok 4.5 requests");
-    assert.equal(grok45TextBody.reasoning.effort, "high", "Grok 4.5 text generation should default to high reasoning");
-
-    const { body: composerBody, request: composerRequest } = await runTool(
-      tools,
-      "xai_generate_text",
-      { prompt: "hi", model: "grok-composer-2.5-fast", reasoning_effort: "high" },
-      "OK",
-      "https://cli-chat-proxy.grok.com",
-    );
-    assert.equal(composerBody.model, "grok-composer-2.5-fast");
-    assert.equal(composerBody.reasoning, undefined, "Composer 2.5 should not send reasoning effort");
-    assert.equal(headerValue(composerRequest.headers, "x-xai-token-auth"), "xai-grok-cli");
-    assert.equal(headerValue(composerRequest.headers, "x-grok-model-override"), "grok-composer-2.5-fast");
-    assert.ok(headerValue(composerRequest.headers, "x-grok-conv-id"), "Composer 2.5 tool calls should include a Grok conversation id");
-
-    const { body: buildBody, request: buildRequest } = await runTool(
-      tools,
-      "xai_generate_text",
-      { prompt: "hi", model: "grok-build" },
-      "OK",
-      "https://cli-chat-proxy.grok.com",
-    );
-    assert.equal(buildBody.model, "grok-build");
-    assert.equal(headerValue(buildRequest.headers, "x-grok-model-override"), "grok-build");
-    assert.ok(headerValue(buildRequest.headers, "x-grok-conv-id"), "Grok Build tool calls should include a Grok conversation id");
-
-
-    const { body: imageAnalysisBody } = await runTool(tools, "xai_analyze_image", {
-      image: "https://example.test/cat.png",
-      question: "what is here?",
-    });
-    const imageContent = imageAnalysisBody.input[0].content;
-    assert.equal(imageContent[0].type, "input_image");
-    assert.equal(imageContent[1].type, "input_text");
-
-    const { body: imageGenBody } = await runTool(tools, "xai_generate_image", { prompt: "a crisp diagram" }, /Generated 1 image/);
-    assert.equal(imageGenBody.model, "grok-imagine-image-quality");
-    const imageTool = tools.get("xai_generate_image");
-    assert.equal(Object.hasOwn(imageGenBody, "size"), false, "image generation should not send unsupported size defaults");
-    assert.equal(Object.hasOwn(imageGenBody, "n"), false, "image generation should not send n unless explicitly requested");
-    assert.equal(imageTool.parameters.properties.size, undefined, "image tool schema should not advertise unsupported size");
-    assert.equal(imageTool.parameters.properties.n.default, undefined, "image tool schema should not inject n when omitted");
-    assert.equal(imageTool.parameters.properties.n.minimum, 1, "image tool schema should reject image counts below one");
-    assert.equal(imageTool.parameters.properties.n.maximum, 4, "image tool schema should reject image counts above four");
-
-    const { body: imageBatchBody } = await runTool(
-      tools,
-      "xai_generate_image",
-      { prompt: "three crisp diagrams", n: 3 },
-      /Generated 1 image/,
-    );
-    assert.equal(imageBatchBody.n, 3, "image generation should forward an explicit n value");
-    assert.equal(Object.hasOwn(imageBatchBody, "size"), false, "explicit n requests should still omit size");
-
-    const requestsBeforeUnsupportedSize = requests.length;
-    const unsupportedSizeResult = await imageTool.execute(
-      "call_unsupported_size",
-      { prompt: "a crisp diagram", size: "1024x1024" },
-      undefined,
-      () => {},
-      authContext(),
-    );
-    assert.match(unsupportedSizeResult.content[0].text, /does not support the 'size' parameter/);
-    assert.equal(requests.length, requestsBeforeUnsupportedSize, "unsupported size should fail before sending a request");
-
-    const invalidCountResult = await imageTool.execute(
-      "call_invalid_image_count",
-      { prompt: "a crisp diagram", n: 0 },
-      undefined,
-      () => {},
-      authContext(),
-    );
-    assert.match(invalidCountResult.content[0].text, /must be an integer from 1 to 4/);
-    assert.equal(requests.length, requestsBeforeUnsupportedSize, "invalid n should fail before sending a request");
-
-    const { body: multiAgentBody, result: multiAgentResult } = await runTool(tools, "xai_multi_agent", { query: "latest xAI tools", num_agents: 4 });
-    assert.equal(multiAgentBody.model, "grok-4.20-multi-agent-0309");
-    assert.equal(multiAgentBody.reasoning.effort, "medium");
-    assert.equal(multiAgentResult.details.agents_used, 4);
-    assert.ok(multiAgentBody.tools.some((tool) => tool.type === "web_search"));
-    assert.ok(multiAgentBody.tools.some((tool) => tool.type === "x_search"));
 
     console.log("verify-extension: ok");
   } finally {

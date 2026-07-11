@@ -9,14 +9,14 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue)](https://www.typescriptlang.org/)
 [![pi compatible](https://img.shields.io/badge/pi-Compatible-blueviolet)](https://pi.dev)
 
-**xAI (Grok) OAuth provider for pi** — 1M context, reasoning, and custom xAI tools.
+**xAI (Grok) OAuth provider for pi** — Grok 4.5, 1M-context Grok 4.3, OAuth, and reasoning models.
 ```bash
 pi install git:github.com/sting8k/pi-xai-oauth@main
 ```
 
-This package adds **Grok 4.5**, **Grok 4.3**, **Grok Build**, and **Composer 2.5** as fully-integrated xAI OAuth models in pi, with proper OAuth login, automatic token refresh, and a slim suite of custom tools (`xai_generate_text`, `xai_multi_agent`, `xai_generate_image`, and `xai_analyze_image`).
+This package adds **Grok 4.5**, **Grok 4.3**, **Grok Build**, and **Composer 2.5** as fully-integrated xAI OAuth models in pi, with proper OAuth login and automatic token refresh. It is provider-only and does not register extra `xai_*` tools.
 
-> **Latest compatibility note:** this fork's `main` branch supports pi 0.80.3, Grok 4.5, and the slim toolset. Remove older npm/local copies before installing `git:github.com/sting8k/pi-xai-oauth@main`.
+> **Latest compatibility note:** this fork's `main` branch supports pi 0.80.3 and Grok 4.5 as a provider-only extension. Remove older npm/local copies before installing `git:github.com/sting8k/pi-xai-oauth@main`.
 
 ---
 
@@ -49,10 +49,9 @@ This package adds **Grok 4.5**, **Grok 4.3**, **Grok Build**, and **Composer 2.5
 - **Modern Grok models** — Grok 4.5 by default, plus Grok 4.3 with 1M context
 - **Coding models** — Grok Build and Composer 2.5 Fast are available from the same `xai-auth` provider
 - **Reasoning support** — configurable thinking levels: `low` / `medium` / `high`
-- **Slim custom xAI tools** — generate text, multi-agent research, image generation, and image analysis
 - **Modern API** — uses OpenAI's `responses` API format via `https://api.x.ai/v1`, with Grok CLI endpoint routing for CLI-only models
 
-> **✅ Verified (May 2026)**: The slim custom toolset (`xai_generate_text`, `xai_multi_agent`, `xai_generate_image`, `xai_analyze_image`) has been tested end-to-end. The provider handles mixed-model requests, Grok CLI endpoint routing, OAuth, and native xAI tool shapes.
+> **✅ Verified (May 2026)**: The provider handles mixed-model requests, Grok CLI endpoint routing, OAuth, and xAI Responses streaming without registering extra custom tools.
 
 ---
 
@@ -79,7 +78,7 @@ If localhost callbacks are blocked (VPN, Docker, remote dev), the TUI shows a te
 pi install git:github.com/sting8k/pi-xai-oauth@main
 ```
 
-This installs the slim fork build with Grok 4.5 and without Cursor/Grok CLI shim tools.
+This installs the provider-only fork build with Grok 4.5 and no extra tool registrations.
 
 Then optionally configure it as default:
 
@@ -94,14 +93,14 @@ Then optionally configure it as default:
 
 > **⚠️ Important: install only one copy**
 >
-> `pi-xai-oauth` registers fixed tool names such as `xai_generate_text`, `xai_multi_agent`, and `xai_generate_image`. If you install more than one copy — for example `npm:pi-xai-oauth` plus this git fork, or two different local checkouts — pi will fail to start with `Tool "xai_generate_text" conflicts with ...` errors.
+> If you install more than one copy — for example `npm:pi-xai-oauth` plus this git fork, or two different local checkouts — pi may load the provider more than once and make troubleshooting confusing.
 >
 > Check with:
 > ```bash
 > pi list
 > ```
 >
-> For the slim fork, keep only the git main install:
+> For the provider-only fork, keep only the git main install:
 > ```bash
 > pi remove npm:pi-xai-oauth
 > pi remove /path/to/other/pi-xai-oauth-copy
@@ -213,60 +212,7 @@ pi --model grok-4.3:low "What's the weather?"
 
 ## Custom Tools
 
-This package registers OAuth-backed custom tools that use the xAI API directly. They appear alongside your other agent tools in the pi TUI and are available to any agent running with the `xai-auth` provider.
-
-**How to use them:** Simply call the tool by name in your prompts or agent workflows (e.g. "use xai_generate_text with reasoning effort high"). The tools automatically use your authenticated xAI session.
-
-> **Tip:** See the ⚠️ warning above about local vs published package conflicts.
-
-### `xai_generate_text`
-Generate text with full reasoning and stateful conversations.
-
-```json
-{
-  "prompt": "Explain neural networks",
-  "model": "grok-4.5",
-  "reasoning_effort": "high"
-}
-```
-
-### `xai_multi_agent`
-Deep multi-agent research using Grok's multi-agent model plus native web and X search tools.
-
-```json
-{
-  "query": "Latest advances in LLM quantization",
-  "num_agents": 16,
-  "reasoning_effort": "high"
-}
-```
-
-
-
-
-### `xai_generate_image`
-Generate images with xAI's current image generation model.
-
-```json
-{
-  "prompt": "A clean product diagram of an OAuth flow",
-  "model": "grok-imagine-image-quality"
-}
-```
-
-### `xai_analyze_image`
-Analyze an image URL, data URL, or local `.png` / `.jpg` path with Grok vision.
-
-```json
-{
-  "image": "/Users/me/Desktop/screenshot.png",
-  "question": "What error is visible?"
-}
-```
-
-
-
-> **Note:** These tools use the xAI API under the hood — they count toward your SuperGrok rate limits.
+This fork is provider-only. It registers the `xai-auth` provider and model catalog, but no extra `xai_*` tools.
 
 ---
 
@@ -320,7 +266,7 @@ This means xAI rejected a multimodal Responses `input` shape. Use the latest pac
 
 > **Fixed in repair**: Requests from other providers (DeepSeek, OpenAI Codex, etc.) no longer get mutated by the xAI sanitation hook.
 
-If you call `xai_generate_text` directly, `image_url` may be either:
+When using image-capable Grok models, image URLs may be either:
 
 - an `http(s)://...` URL
 - a `data:image/...;base64,...` URL
@@ -350,7 +296,7 @@ In the pi TUI, the current model is shown in the status bar. You can also check 
 /model
 ```
 
-### `Tool "xai_generate_text" conflicts with ...` or `pi list` shows duplicate copies
+### Duplicate installs or `pi list` shows duplicate copies
 
 You have more than one copy of this extension installed. This commonly happens when updating from npm to a local checkout, or when switching between two local worktrees. pi refuses to load duplicate tool names.
 
@@ -461,15 +407,14 @@ git checkout -b feature/your-task
 ```
 pi-xai-oauth/
 ├── extensions/
-│   ├── xai-oauth.ts          # Thin provider/tools entrypoint
-│   └── xai/                  # Domain modules: OAuth, auth, models, payloads, tools
+│   ├── xai-oauth.ts          # Thin provider entrypoint
+│   └── xai/                  # Domain modules: OAuth, auth, models, payloads, responses
 │       ├── auth.ts           # Grok CLI credential reuse + token resolution
 │       ├── constants.ts      # URLs, OAuth constants, defaults
 │       ├── models.ts         # Model catalog + routing helpers
 │       ├── oauth.ts          # OAuth discovery/login/refresh/callback helpers
 │       ├── payload.ts        # xAI Responses payload normalization
-│       ├── responses.ts      # xAI request + streaming helpers
-│       └── tools/            # Slim OAuth-backed custom xAI tools
+│       └── responses.ts      # xAI request + streaming helpers
 ├── bin/
 │   └── setup.js              # One-command setup (npx pi-xai-oauth)
 ├── scripts/

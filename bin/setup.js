@@ -136,12 +136,8 @@ function printNextSteps(nonInteractive = false) {
     console.log("Grok 4.5, Grok 4.3, Grok Build, Composer 2.5 + xAI OAuth are now configured and ready.\n");
   }
 
-  console.log("You now have access to powerful reasoning, coding models, and long context!\n");
-  console.log("Bonus tools available:");
-  console.log("   • xai_generate_text     — Generate text with full reasoning");
-  console.log("   • xai_multi_agent       — Multi-agent research with web/X tools");
-  console.log("   • xai_generate_image    — Image generation");
-  console.log("   • xai_analyze_image     — Image analysis\n");
+  console.log("You now have access to powerful reasoning, coding models, and long context!");
+  console.log("Provider-only: no extra xai_* tools are registered.\n");
   console.log(`   Update later: ${color(`pi update ${INSTALL_SPEC}`, "yellow")}\n`);
 }
 

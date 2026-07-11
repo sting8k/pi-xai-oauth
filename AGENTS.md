@@ -33,15 +33,14 @@ pi-xai-oauth/
 ├── bin/
 │   └── setup.js          # One-command installer + settings seeder
 ├── extensions/
-│   ├── xai-oauth.ts      # Thin entrypoint: provider registration + tool orchestration
+│   ├── xai-oauth.ts      # Thin entrypoint: provider registration
 │   └── xai/              # Focused implementation modules
 │       ├── constants.ts  # URLs, defaults, OAuth constants
 │       ├── models.ts     # Model catalog + routing helpers
 │       ├── oauth.ts      # OAuth discovery/login/refresh/callback helpers
 │       ├── auth.ts       # Credential reuse + token resolution helpers
 │       ├── payload.ts    # Responses payload normalization
-│       ├── responses.ts  # xAI request/stream helpers
-│       └── tools/        # Slim OAuth-backed custom xAI tools
+│       └── responses.ts  # xAI request/stream helpers
 ├── package.json
 ├── tsconfig.json
 ├── README.md
